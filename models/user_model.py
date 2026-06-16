@@ -26,7 +26,31 @@ def get_total_employees():
 def get_employee_directory(annual_days=20):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("\n        SELECT\n            u.id,\n            u.name,\n            u.email,\n            u.department,\n            u.job_role,\n            CASE\n                WHEN ? - ISNULL(SUM(\n                    CASE\n                        WHEN l.status='Approved'\n                        THEN DATEDIFF(day, CAST(l.start_date AS date), CAST(l.end_date AS date)) + 1\n                        ELSE 0\n                    END\n                ), 0) < 0 THEN 0\n                ELSE ? - ISNULL(SUM(\n                    CASE\n                        WHEN l.status='Approved'\n                        THEN DATEDIFF(day, CAST(l.start_date AS date), CAST(l.end_date AS date)) + 1\n                        ELSE 0\n                    END\n                ), 0)\n            END AS leave_balance\n        FROM users u\n        LEFT JOIN leaves l ON l.user_id = u.id\n        WHERE u.role = 'employee'\n        GROUP BY u.id, u.name, u.email, u.department, u.job_role\n        ORDER BY u.id DESC\n        ", (annual_days, annual_days))
+    cursor.execute("""
+        SELECT
+            u.id,
+            u.name,
+            u.email,
+            u.department,
+            u.job_role,
+            CAST(
+                MAX(
+                    ? - COALESCE(SUM(
+                        CASE
+                            WHEN l.status='Approved'
+                            THEN julianday(l.end_date) - julianday(l.start_date) + 1
+                            ELSE 0
+                        END
+                    ), 0),
+                    0
+                ) AS INTEGER
+            ) AS leave_balance
+        FROM users u
+        LEFT JOIN leaves l ON l.user_id = u.id
+        WHERE u.role = 'employee'
+        GROUP BY u.id, u.name, u.email, u.department, u.job_role
+        ORDER BY u.id DESC
+        """, (annual_days,))
     rows = cursor.fetchall()
     conn.close()
     return rows

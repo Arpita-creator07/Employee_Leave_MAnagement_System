@@ -3,10 +3,10 @@ from database.db import get_connection
 def _ensure_attachment_column():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("\n        SELECT COUNT(*)\n        FROM INFORMATION_SCHEMA.COLUMNS\n        WHERE TABLE_NAME='leaves' AND COLUMN_NAME='attachment_path'\n        ")
-    exists = cursor.fetchone()[0]
+    cursor.execute("PRAGMA table_info(leaves)")
+    exists = any(row[1] == 'attachment_path' for row in cursor.fetchall())
     if not exists:
-        cursor.execute('ALTER TABLE leaves ADD attachment_path NVARCHAR(500) NULL')
+        cursor.execute('ALTER TABLE leaves ADD COLUMN attachment_path TEXT')
         conn.commit()
     conn.close()
 
@@ -30,13 +30,13 @@ def get_user_leaves(user_id):
 def get_dashboard_counts(user_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT COUNT(*) FROM leaves WHERE user_id=?', user_id)
+    cursor.execute('SELECT COUNT(*) FROM leaves WHERE user_id=?', (user_id,))
     total = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM leaves WHERE status='Approved' AND user_id=?", user_id)
+    cursor.execute("SELECT COUNT(*) FROM leaves WHERE status='Approved' AND user_id=?", (user_id,))
     approved = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM leaves WHERE status='Rejected' AND user_id=?", user_id)
+    cursor.execute("SELECT COUNT(*) FROM leaves WHERE status='Rejected' AND user_id=?", (user_id,))
     rejected = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM leaves WHERE status='Pending' AND user_id=?", user_id)
+    cursor.execute("SELECT COUNT(*) FROM leaves WHERE status='Pending' AND user_id=?", (user_id,))
     pending = cursor.fetchone()[0]
     conn.close()
     return (total, approved, rejected, pending)
@@ -53,7 +53,12 @@ def get_pending_requests():
 def get_on_leave_today_count():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("\n        SELECT COUNT(*)\n        FROM leaves\n        WHERE status='Approved'\n          AND CAST(GETDATE() AS date) BETWEEN CAST(start_date AS date) AND CAST(end_date AS date)\n    ")
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM leaves
+        WHERE status='Approved'
+          AND date('now') BETWEEN date(start_date) AND date(end_date)
+    """)
     count = cursor.fetchone()[0]
     conn.close()
     return count
@@ -63,7 +68,21 @@ def get_recent_requests(limit=5):
     _ensure_attachment_column()
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(f'\n        SELECT TOP {limit}\n            leaves.id,\n            users.name,\n            leaves.leave_type,\n            leaves.start_date,\n            leaves.end_date,\n            leaves.reason,\n            leaves.status,\n            leaves.attachment_path\n        FROM leaves\n        JOIN users ON leaves.user_id = users.id\n        ORDER BY leaves.id DESC\n    ')
+    cursor.execute('''
+        SELECT
+            leaves.id,
+            users.name,
+            leaves.leave_type,
+            leaves.start_date,
+            leaves.end_date,
+            leaves.reason,
+            leaves.status,
+            leaves.attachment_path
+        FROM leaves
+        JOIN users ON leaves.user_id = users.id
+        ORDER BY leaves.id DESC
+        LIMIT ?
+    ''', (limit,))
     rows = cursor.fetchall()
     conn.close()
     return rows

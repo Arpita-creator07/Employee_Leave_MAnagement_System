@@ -2,9 +2,11 @@ from flask import Flask, render_template
 from routes.auth_routes import auth_bp
 from routes.employee_routes import employee_bp
 from routes.admin_routes import admin_bp
+from database.db import init_db
 import config
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
+init_db()
 app.register_blueprint(auth_bp)
 app.register_blueprint(employee_bp)
 app.register_blueprint(admin_bp)
