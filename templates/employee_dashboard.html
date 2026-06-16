@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en" style="height: 100%;">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Leave Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    html, body { height: 100%; }
+    * { font-family: 'DM Sans', sans-serif; }
+    body { background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); color: #0f172a; }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: #e2e8f0; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade { animation: fadeIn 0.4s ease-out forwards; }
+    .card-animate { animation: fadeIn 0.5s ease-out forwards; opacity: 0; }
+    .card-animate:nth-child(1) { animation-delay: 0.1s; }
+    .card-animate:nth-child(2) { animation-delay: 0.2s; }
+    .card-animate:nth-child(3) { animation-delay: 0.3s; }
+    .card-animate:nth-child(4) { animation-delay: 0.4s; }
+    .main-wrapper { display: flex; height: 100%; }
+    .sidebar { width: 256px; background: white; border-right: 1px solid #dbeafe; flex-shrink: 0; overflow-y: auto; display: flex; flex-direction: column; }
+    .main-content { flex: 1; overflow-y: auto; }
+    .nav-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: none; width: 100%; background: none; cursor: pointer; color: #475569; transition: all 0.3s; text-align: left; font-weight: 500; }
+    .nav-link:hover { color: #2563eb; background-color: #eff6ff; }
+    .nav-link.active { background-color: #dbeafe; color: #2563eb; border: 1px solid #bfdbfe; }
+    .badge-status { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .badge-status.pending { background-color: #fef3c7; color: #92400e; }
+    .badge-status.approved { background-color: #d1fae5; color: #065f46; }
+    .badge-status.rejected { background-color: #fee2e2; color: #7f1d1d; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.875rem; font-weight: 600; }
+    .table-hover tbody tr:hover { background-color: #eff6ff !important; }
+    .card-header-gradient { background: linear-gradient(90deg, #eff6ff 0%, #f3e8ff 100%); }
+    .toast-notification { position: fixed; bottom: 1.5rem; right: 1.5rem; border: 1px solid #dbeafe; border-radius: 0.75rem; padding: 1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); background: white; transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 1050; }
+    .toast-notification.show { transform: translateY(0); opacity: 1; }
+    .progress-bar-custom { height: 0.5rem; background-color: #eff6ff; border-radius: 9999px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 9999px; }
+    .btn-sm-icon { width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; border: none; }
+    .gap-3 { gap: 0.75rem; }
+    .fw-500 { font-weight: 500; }
+    .stat-card { position: relative; overflow: hidden; }
+    .stat-card::before { content: ''; position: absolute; top: -50%; right: -50%; width: 200px; height: 200px; background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%); border-radius: 50%; }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="https://cdn.tailwindcss.com/3.4.17" type="text/javascript"></script>
+ </head>
+ <body style="height: 100%; margin: 0;">
+  <div class="main-wrapper">
+
+   <aside class="sidebar scrollbar-thin">
+
+    <div class="p-3 border-bottom" style="border-color: #dbeafe;">
+     <div class="d-flex align-items-center gap-3 px-2 py-2">
+      <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #a855f7 0%, #2563eb 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.875rem;">
+       {{ employee_initials }}
+      </div>
+      <div class="flex-grow-1 min-w-0">
+       <p class="mb-0 fw-500" style="font-size: 0.875rem;">{{ employee_name }}</p><small class="text-secondary d-block text-truncate">{{ employee_job_role }}</small>
+      </div>
+     </div>
+    </div>
+    <nav class="p-3 flex-grow-1">
+     <button onclick="switchPage('dashboard')" class="nav-link active" data-page="dashboard">
+      <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+      </svg><span class="fw-500">My Dashboard</span> </button> <button onclick="switchPage('my-leave')" class="nav-link" data-page="my-leave">
+      <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg><span class="fw-500">My Leave Requests</span> </button> <button onclick="switchPage('apply-leave')" class="nav-link" data-page="apply-leave">
+      <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      </svg><span class="fw-500">Apply Leave</span> </button> <button onclick="switchPage('settings')" class="nav-link" data-page="settings">
+      <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg><span class="fw-500">Settings</span> </button>
+    </nav>
+    <div class="p-3 border-top mt-auto" style="border-color: #dbeafe;">
+      <a href="/logout" class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2">
+        <span>↩</span><span>Logout</span>
+      </a>
+    </div>
+   </aside>
+   <main class="main-content scrollbar-thin">
+
+    <div id="page-dashboard" class="p-5">
+
+     <header class="mb-5 animate-fade">
+      <div>
+       <h1 id="dashboard-title" class="h3 fw-bold mb-2">My Leave Dashboard</h1>
+       <p class="text-secondary">Track your leave balance and view upcoming time off</p>
+      </div>
+     </header>
+     <div class="row g-4 mb-5">
+      <div class="col-md-6 col-lg-3">
+       <div class="card border-light card-animate stat-card" style="border-color: #dbeafe;">
+        <div class="card-body position-relative">
+         <div class="d-flex align-items-center justify-content-between mb-3">
+          <div style="width: 48px; height: 48px; background-color: #d1fae5; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center;">
+           <svg style="width: 24px; height: 24px; color: #059669;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+           </svg>
+          </div>
+         </div>
+         <h6 class="text-secondary mb-2" style="font-size: 0.875rem;">Annual Leave</h6>
+         <h3 class="mb-0">{{ leave_balance.annual }}/{{ leave_totals.annual }}</h3><small class="text-secondary">{{ leave_used.annual }} days used</small>
+        </div>
+       </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+       <div class="card border-light card-animate stat-card" style="border-color: #dbeafe;">
+        <div class="card-body position-relative">
+         <div class="d-flex align-items-center justify-content-between mb-3">
+          <div style="width: 48px; height: 48px; background-color: #fee2e2; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center;">
+           <svg style="width: 24px; height: 24px; color: #dc2626;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+           </svg>
+          </div>
+         </div>
+         <h6 class="text-secondary mb-2" style="font-size: 0.875rem;">Sick Leave</h6>
+         <h3 class="mb-0">{{ leave_balance.sick }}/{{ leave_totals.sick }}</h3><small class="text-secondary">{{ leave_used.sick }} days used</small>
+        </div>
+       </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+       <div class="card border-light card-animate stat-card" style="border-color: #dbeafe;">
+        <div class="card-body position-relative">
+         <div class="d-flex align-items-center justify-content-between mb-3">
+          <div style="width: 48px; height: 48px; background-color: #fef3c7; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center;">
+           <svg style="width: 24px; height: 24px; color: #92400e;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+           </svg>
+          </div>
+         </div>
+         <h6 class="text-secondary mb-2" style="font-size: 0.875rem;">Casual Leave</h6>
+         <h3 class="mb-0">{{ leave_balance.casual }}/{{ leave_totals.casual }}</h3><small class="text-secondary">{{ leave_used.casual }} days used</small>
+        </div>
+       </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+       <div class="card border-light card-animate stat-card" style="border-color: #dbeafe;">
+        <div class="card-body position-relative">
+         <div class="d-flex align-items-center justify-content-between mb-3">
+          <div style="width: 48px; height: 48px; background-color: #e9d5ff; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center;">
+           <svg style="width: 24px; height: 24px; color: #9333ea;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+           </svg>
+          </div>
+         </div>
+         <h6 class="text-secondary mb-2" style="font-size: 0.875rem;">Emergency Leave</h6>
+         <h3 class="mb-0">{{ leave_balance.emergency }}/{{ leave_totals.emergency }}</h3><small class="text-secondary">{{ leave_used.emergency }} days used</small>
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="row g-4">
+
+      <div class="col-lg-8">
+       <div class="card border-light animate-fade shadow-sm" style="border-color: #dbeafe; animation-delay: 0.5s;">
+        <div class="card-header card-header-gradient">
+         <h5 class="mb-0">Recent Leaves</h5>
+        </div>
+        <div class="card-body">
+         {% if recent_leaves %}
+          {% for leave in recent_leaves %}
+          <div class="mb-4 p-4 rounded-3" style="background-color: #eff6ff; border-left: 4px solid #2563eb;">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+              <div>
+                <h6 class="mb-1 fw-600">{{ leave.type }}</h6>
+                <p class="mb-0 text-secondary" style="font-size: 0.875rem;">{{ leave.start }} - {{ leave.end }}</p>
+              </div>
+              <span class="badge-status {{ (leave.status or '').lower() }}">{{ leave.status }}</span>
+            </div>
+          </div>
+          {% endfor %}
+         {% else %}
+          <p class="text-secondary mb-0">No recent leave requests.</p>
+         {% endif %}
+        </div>
+       </div>
+      </div>
+      <div class="col-lg-4">
+       {% set sick_width = (leave_balance.sick * 100 / leave_totals.sick) if leave_totals.sick else 0 %}
+       {% set casual_width = (leave_balance.casual * 100 / leave_totals.casual) if leave_totals.casual else 0 %}
+       {% set emergency_width = (leave_balance.emergency * 100 / leave_totals.emergency) if leave_totals.emergency else 0 %}
+       <div class="card border-light animate-fade shadow-sm" style="border-color: #dbeafe; animation-delay: 0.6s;">
+        <div class="card-body">
+         <h5 class="mb-4">Leave Balance Breakdown</h5>
+         <div class="mb-4">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+           <span class="text-secondary" style="font-size: 0.875rem;">Sick Leave</span> <span class="fw-600">{{ leave_balance.sick }}/{{ leave_totals.sick }} days</span>
+          </div>
+          <div class="progress-bar-custom">
+           <div class="progress-fill leave-progress-fill" data-width="{{ sick_width }}" style="background: linear-gradient(90deg, #f43f5e 0%, #ec4899 100%);"></div>
+          </div>
+         </div>
+         <div class="mb-4">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+           <span class="text-secondary" style="font-size: 0.875rem;">Casual Leave</span> <span class="fw-600">{{ leave_balance.casual }}/{{ leave_totals.casual }} days</span>
+          </div>
+          <div class="progress-bar-custom">
+           <div class="progress-fill leave-progress-fill" data-width="{{ casual_width }}" style="background: linear-gradient(90deg, #f59e0b 0%, #f97316 100%);"></div>
+          </div>
+         </div>
+         <div class="mb-4">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+           <span class="text-secondary" style="font-size: 0.875rem;">Emergency Leave</span> <span class="fw-600">{{ leave_balance.emergency }}/{{ leave_totals.emergency }} days</span>
+          </div>
+          <div class="progress-bar-custom">
+           <div class="progress-fill leave-progress-fill" data-width="{{ emergency_width }}" style="background: linear-gradient(90deg, #a855f7 0%, #9333ea 100%);"></div>
+          </div>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+    <div id="page-my-leave" class="p-5" style="display: none;">
+     <header class="mb-5 animate-fade">
+      <h1 class="h3 fw-bold mb-2">My Leave Requests</h1>
+      <p class="text-secondary">View and manage your leave applications</p>
+     </header>
+     <div class="card border-light shadow-sm">
+      <div class="table-responsive">
+       <table class="table table-hover mb-0">
+        <thead class="table-light">
+         <tr>
+          <th class="text-uppercase" style="font-size: 0.75rem; font-weight: 600;">Leave Type</th>
+          <th class="text-uppercase" style="font-size: 0.75rem; font-weight: 600;">Duration</th>
+          <th class="text-uppercase" style="font-size: 0.75rem; font-weight: 600;">Dates</th>
+          <th class="text-uppercase" style="font-size: 0.75rem; font-weight: 600;">Status </th>
+          <th class="text-uppercase" style="font-size: 0.75rem; font-weight: 600;">Actions</th>
+         </tr>
+        </thead>
+        <tbody>
+         {% if my_leaves %}
+         {% for leave in my_leaves %}
+         <tr>
+          <td><span class="badge" style="background-color: #d1fae5; color: #065f46;">{{ leave.type }}</span></td>
+          <td>{{ leave.days }} days</td>
+          <td>{{ leave.start }} - {{ leave.end }}</td>
+          <td><span class="badge-status {{ (leave.status or '').lower() }}">{{ leave.status }}</span></td>
+          <td>
+            <button
+              class="btn btn-sm btn-outline-secondary"
+              data-leave-type='{{ leave.type|tojson|forceescape }}'
+              data-leave-duration='{{ ((leave.days|string) ~ " days")|tojson|forceescape }}'
+              data-leave-dates='{{ (leave.start ~ " - " ~ leave.end)|tojson|forceescape }}'
+              data-leave-reason='{{ leave.reason|tojson|forceescape }}'
+              data-admin-comment='{{ leave.admin_comment|tojson|forceescape }}'
+              onclick="showLeaveDetailsFromButton(this)"
+            >View</button>
+          </td>
+         </tr>
+         {% endfor %}
+         {% else %}
+         <tr>
+          <td colspan="5" class="text-center text-secondary py-3">No leave requests found.</td>
+         </tr>
+         {% endif %}
+        </tbody>
+      </table>
+     </div>
+    </div>
+    </div>
+    
+    <div id="page-apply-leave" class="p-5" style="display: none;">
+     <header class="mb-5 animate-fade">
+      <h1 class="h3 fw-bold mb-2">Apply Leave</h1>
+      <p class="text-secondary">Submit a new leave request</p>
+     </header>
+     <div class="row">
+      <div class="col-lg-8">
+       <div class="card border-light shadow-sm">
+        <div class="card-body p-5">
+         <form id="applyLeaveForm" onsubmit="handleApplyLeave(event)">
+          <div class="mb-4"><label class="form-label fw-600 mb-3">Leave Type</label>
+           <div class="row g-3">
+            <div class="col-md-4">
+             <div class="form-check"><input class="form-check-input" type="radio" name="leaveType" id="leaveSick" value="Sick Leave" required> <label class="form-check-label" for="leaveSick"> <strong>Sick Leave</strong> <small class="d-block text-secondary">For health-related absences</small> </label>
+             </div>
+            </div>
+            <div class="col-md-4">
+             <div class="form-check"><input class="form-check-input" type="radio" name="leaveType" id="leaveCasual" value="Casual Leave" required> <label class="form-check-label" for="leaveCasual"> <strong>Casual Leave</strong> <small class="d-block text-secondary">For personal time off</small> </label>
+             </div>
+            </div>
+            <div class="col-md-4">
+             <div class="form-check"><input class="form-check-input" type="radio" name="leaveType" id="leaveEmergency" value="Emergency Leave" required> <label class="form-check-label" for="leaveEmergency"> <strong>Emergency Leave</strong> <small class="d-block text-secondary">For urgent situations</small> </label>
+             </div>
+            </div>
+           </div>
+          </div>
+          <div class="row g-4 mb-4">
+           <div class="col-md-6"><label for="startDate" class="form-label fw-600">Start Date</label> <input type="date" class="form-control" id="startDate" required>
+           </div>
+           <div class="col-md-6"><label for="endDate" class="form-label fw-600">End Date</label> <input type="date" class="form-control" id="endDate" required>
+           </div>
+          </div>
+          <div class="mb-4"><label for="reason" class="form-label fw-600">Reason for Leave</label> <textarea class="form-control" id="reason" rows="4" style="overflow:hidden; resize:none;" oninput="autoResizeTextarea(this); updateReasonCount(this)" placeholder="Write your reason in 50 to 200 words..." required></textarea>
+            <small id="reasonWordHint" class="form-text text-secondary d-block mt-2">Word count: 0 (minimum 50, maximum 200)</small>
+          </div>
+          <div class="mb-4"><label for="attachment" class="form-label fw-600">Attach Supporting Document</label> <input type="file" class="form-control" id="attachment" name="attachment" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" aria-describedby="attachmentHelp"> <small id="attachmentHelp" class="form-text text-secondary d-block mt-2">Optional: Upload medical certificates or other supporting documents (PDF, DOC, DOCX, JPG, PNG)</small>
+          </div>
+          <div class="d-flex gap-3"><button type="submit" class="btn btn-primary">
+            <svg style="width: 18px; height: 18px; margin-right: 5px;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>Submit Request </button> <button type="reset" class="btn btn-outline-secondary">Clear Form</button>
+          </div>
+         </form>
+        </div>
+       </div>
+      </div>
+      <div class="col-lg-4">
+       <div class="card border-light shadow-sm" style="background-color: #eff6ff;">
+        <div class="card-body">
+         <h6 class="fw-600 mb-3">Important Notes</h6>
+         <ul class="list-unstyled" style="font-size: 0.875rem;">
+          <li class="mb-2"><strong>Processing Time:</strong> Requests are typically processed within 24 hours</li>
+          <li class="mb-2"><strong>Balance Check:</strong> Ensure you have sufficient balance for the leave type</li>
+          <li class="mb-2"><strong>Advance Notice:</strong> Please submit requests at least 2 days in advance when possible</li>
+          <li><strong>Documentation:</strong> Medical certificates may be required for sick leave</li>
+         </ul>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+    <div id="page-calendar" class="p-8 hidden">
+        <header class="mb-6">
+          <h1 class="text-3xl font-bold mb-1">Leave Calendar</h1>
+          <p class="text-slate-600">Visualize approved leave schedules and employee availability.</p>
+        </header>
+        <section class="bg-white border border-blue-100 rounded-2xl p-6 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+            <div>
+              <h2 class="text-lg font-semibold text-slate-900">Team Leave Schedule</h2>
+              <p class="text-sm text-slate-500">Approved leave dates are highlighted. Click a date to view employees on leave.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="calendarPrevBtn" type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">Prev</button>
+              <p id="calendarMonthLabel" class="text-sm font-semibold text-slate-800 min-w-[160px] text-center"></p>
+              <button id="calendarNextBtn" type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">Next</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div class="xl:col-span-2">
+              <div class="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-500 mb-2">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+              </div>
+              <div id="adminLeaveCalendarGrid" class="grid grid-cols-7 gap-2"></div>
+            </div>
+
+            <aside class="border border-slate-200 rounded-xl p-4 bg-slate-50">
+              <h3 class="text-sm font-semibold text-slate-800 mb-1">Employees On Leave</h3>
+              <p id="calendarSelectedDateLabel" class="text-xs text-slate-500 mb-3">Select a date</p>
+              <div id="calendarSelectedDateList" class="space-y-2 text-sm text-slate-700">
+                <p class="text-slate-500">No date selected.</p>
+              </div>
+              <div class="mt-4 pt-3 border-t border-slate-200">
+                <div class="flex items-center gap-2 text-xs text-slate-600">
+                  <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                  <span>Approved leave exists on date</span>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </div>
+    <div id="page-settings" class="p-5" style="display: none;">
+     <header class="mb-5 animate-fade">
+      <h1 class="h3 fw-bold mb-2">Settings</h1>
+      <p class="text-secondary">Manage your preferences and profile</p>
+     </header>
+     <div class="row">
+      <div class="col-lg-8">
+       {% if profile_status and profile_message %}
+       <div id="profileAlert" class="mb-4 px-4 py-3 rounded-3 border {% if profile_status == 'success' %}bg-success-subtle border-success-subtle text-success-emphasis{% else %}bg-danger-subtle border-danger-subtle text-danger-emphasis{% endif %}">
+        {{ profile_message }}
+       </div>
+       {% endif %}
+       <div class="card border-light shadow-sm">
+        <div class="card-header card-header-gradient">
+         <h5 class="mb-0">Personal Information</h5>
+        </div>
+        <div class="card-body">
+         <form method="POST" action="/employee/profile/update">
+          <div class="mb-3">
+           <label class="form-label fw-600">Full Name</label> <input type="text" class="form-control" name="name" value="{{ profile_form.name }}" required>
+          </div>
+          <div class="mb-3">
+           <label class="form-label fw-600">Email</label> <input type="email" class="form-control" name="email" value="{{ profile_form.email }}" required>
+          </div>
+          <div class="mb-3">
+           <label class="form-label fw-600">Department</label> <input type="text" class="form-control" value="{{ employee_department }}" disabled>
+          </div>
+          <div class="mb-3">
+           <label class="form-label fw-600">Job Role</label> <input type="text" class="form-control" value="{{ employee_job_role }}" disabled>
+          </div><button type="submit" class="btn btn-primary">Save Changes</button>
+         </form>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </main>
+  </div>
+  <div id="toast" class="toast-notification">
+   <div class="d-flex align-items-center gap-3">
+    <div id="toast-icon"></div>
+    <div>
+     <p id="toast-title" class="mb-0 fw-500"></p><small id="toast-message" class="text-secondary"></small>
+    </div>
+   </div>
+  </div>
+  
+  <div id="leaveModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 2000; align-items: center; justify-content: center;">
+   <div style="position: relative; background: white; border-radius: 1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); max-width: 860px; width: 95%; max-height: 82vh; overflow: hidden; animation: fadeIn 0.3s ease-out; display: flex; flex-direction: column;">
+    <div style="padding: 2rem; border-bottom: 1px solid #e5e7eb;">
+     <div style="display: flex; align-items: center; justify-content: space-between;">
+      <h5 class="mb-0 fw-bold">Leave Details</h5><button onclick="closeLeaveModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #dc2626;">×</button>
+     </div>
+    </div>
+    <div style="padding: 1.5rem 2rem; overflow-y: auto; flex: 1;">
+     <div style="margin-bottom: 1.5rem;">
+      <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Leave Type</p>
+      <h6 id="modalLeaveType" class="mb-0 fw-600"></h6>
+     </div>
+     <div style="margin-bottom: 1.5rem;">
+      <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Duration</p>
+      <h6 id="modalLeaveDuration" class="mb-0 fw-600"></h6>
+     </div>
+     <div style="margin-bottom: 1.5rem;">
+      <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Dates</p>
+      <h6 id="modalLeaveDates" class="mb-0 fw-600"></h6>
+     </div>
+     <div style="margin-bottom: 1.5rem;">
+      <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Reason</p>
+      <p id="modalLeaveReason" class="mb-0" style="white-space: pre-wrap; word-break: break-word;"></p>
+     </div>
+     <div id="modalAdminCommentBlock" style="margin-bottom: 1.5rem; display: none;">
+      <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Admin Comment</p>
+      <div id="modalAdminComment" style="padding: 0.75rem 1rem; border-radius: 0.5rem; background-color: #fef2f2; color: #991b1b; white-space: pre-wrap; word-break: break-word;"></div>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const VALID_TABS = ["dashboard", "my-leave", "apply-leave", "settings"];
+
+    function autoResizeTextarea(el) {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    }
+
+    function switchPage(page, syncUrl = true) {
+      if (!VALID_TABS.includes(page)) {
+        page = "dashboard";
+      }
+
+      const allPages = document.querySelectorAll('[id^="page-"]');
+      allPages.forEach(p => p.style.display = 'none');
+
+      const selectedPage = document.getElementById(`page-${page}`);
+      if (selectedPage) {
+        selectedPage.style.display = 'block';
+      }
+
+      const navLinks = document.querySelectorAll('.nav-link');
+      navLinks.forEach(link => {
+        if (link.getAttribute('data-page') === page) {
+          link.classList.add('active');
+        } else {
+          link.classList.remove('active');
+        }
+      });
+
+      if (syncUrl) {
+        const url = new URL(window.location.href);
+        if (page === "dashboard") {
+          url.searchParams.delete("tab");
+        } else {
+          url.searchParams.set("tab", page);
+        }
+        const next = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : "");
+        window.history.replaceState({}, "", next);
+      }
+    }
+
+    function showToast(type, title, message) {
+      const toast = document.getElementById('toast');
+      const toastIcon = document.getElementById('toast-icon');
+      const toastTitle = document.getElementById('toast-title');
+      const toastMessage = document.getElementById('toast-message');
+
+      toastTitle.textContent = title;
+      toastMessage.textContent = message;
+
+      if (type === 'success') {
+        toastIcon.innerHTML = '<div style="width: 32px; height: 32px; background-color: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><svg style="width: 20px; height: 20px; color: #059669;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>';
+      } else {
+        toastIcon.innerHTML = '<div style="width: 32px; height: 32px; background-color: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><svg style="width: 20px; height: 20px; color: #dc2626;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></div>';
+      }
+
+      toast.classList.add('show');
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    function showLeaveDetails(title, duration, dates, reason, adminComment) {
+      const modal = document.getElementById('leaveModal');
+      document.getElementById('modalLeaveType').textContent = title;
+      document.getElementById('modalLeaveDuration').textContent = duration;
+      document.getElementById('modalLeaveDates').textContent = dates;
+      document.getElementById('modalLeaveReason').textContent = reason;
+      const comment = (adminComment || '').trim();
+      const commentBlock = document.getElementById('modalAdminCommentBlock');
+      const commentText = document.getElementById('modalAdminComment');
+      if (comment) {
+        commentText.textContent = comment;
+        commentBlock.style.display = 'block';
+      } else {
+        commentText.textContent = '';
+        commentBlock.style.display = 'none';
+      }
+      modal.style.display = 'flex';
+    }
+
+    function showLeaveDetailsFromButton(button) {
+      const parseJsonAttr = (value) => {
+        try {
+          return JSON.parse(value || '""');
+        } catch {
+          return value || '';
+        }
+      };
+
+      showLeaveDetails(
+        parseJsonAttr(button.dataset.leaveType),
+        parseJsonAttr(button.dataset.leaveDuration),
+        parseJsonAttr(button.dataset.leaveDates),
+        parseJsonAttr(button.dataset.leaveReason),
+        parseJsonAttr(button.dataset.adminComment)
+      );
+    }
+
+    function closeLeaveModal() {
+      const modal = document.getElementById('leaveModal');
+      modal.style.display = 'none';
+    }
+
+    function handleApplyLeave(event) {
+      event.preventDefault();
+
+      const selectedType = document.querySelector('input[name="leaveType"]:checked');
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const reason = document.getElementById('reason').value.trim();
+
+      if (!selectedType) {
+        showToast('error', 'Validation Error', 'Please select a leave type.');
+        return;
+      }
+
+      if (!startDate || !endDate) {
+        showToast('error', 'Validation Error', 'Please select both start and end dates.');
+        return;
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      if (start < today || end < today) {
+        showToast('error', 'Validation Error', 'Start date and end date cannot be in the past.');
+        return;
+      }
+
+      if (start.getTime() >= end.getTime()) {
+        showToast('error', 'Validation Error', 'Start date and end date cannot be same. End date must be after start date.');
+        return;
+      }
+
+      const words = reason.split(/\s+/).filter(Boolean).length;
+      if (words < 50 || words > 200) {
+        showToast('error', 'Validation Error', 'Reason must be between 50 and 200 words.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('leave_type', selectedType.value);
+      formData.append('start_date', startDate);
+      formData.append('end_date', endDate);
+      formData.append('reason', reason);
+      const attachmentInput = document.getElementById('attachment');
+      if (attachmentInput && attachmentInput.files && attachmentInput.files[0]) {
+        formData.append('attachment', attachmentInput.files[0]);
+      }
+
+      fetch('/apply_leave', {
+        method: 'POST',
+        body: formData
+      })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || 'Unable to submit leave request');
+        }
+        showToast('success', 'Leave Request Submitted', data.message || 'Your leave request has been submitted.');
+        document.getElementById('applyLeaveForm').reset();
+        const reasonBox = document.getElementById('reason');
+        if (reasonBox) {
+          reasonBox.style.height = "auto";
+          updateReasonCount(reasonBox);
+        }
+
+        setTimeout(() => {
+          window.location.href = '/employee/dashboard?tab=dashboard';
+        }, 700);
+      })
+      .catch((err) => {
+        showToast('error', 'Submission Failed', err.message);
+      });
+    }
+
+    function updateReasonCount(el) {
+      const words = el.value.trim().split(/\s+/).filter(Boolean).length;
+      const hint = document.getElementById('reasonWordHint');
+      if (hint) {
+        hint.textContent = `Word count: ${words} (minimum 50, maximum 200)`;
+      }
+    }
+
+    (function initTab() {
+      const url = new URL(window.location.href);
+      const tab = url.searchParams.get("tab");
+      const initialTab = VALID_TABS.includes(tab) ? tab : "dashboard";
+      switchPage(initialTab, false);
+    })();
+
+    (function initDateValidation() {
+      const startInput = document.getElementById('startDate');
+      const endInput = document.getElementById('endDate');
+      const today = new Date().toISOString().split('T')[0];
+      if (startInput) startInput.min = today;
+      if (endInput) endInput.min = today;
+    })();
+
+    (function initLeaveProgressBars() {
+      const bars = document.querySelectorAll('.leave-progress-fill');
+      bars.forEach((bar) => {
+        const widthValue = Number(bar.dataset.width || 0);
+        const safeWidth = Math.max(0, Math.min(100, widthValue));
+        bar.style.width = `${safeWidth}%`;
+      });
+    })();
+
+    (function initProfileAlert() {
+      const alertBox = document.getElementById('profileAlert');
+      if (!alertBox) return;
+
+      setTimeout(() => {
+        alertBox.style.display = 'none';
+      }, 5000);
+
+      const url = new URL(window.location.href);
+      const hasProfileParams =
+        url.searchParams.has('profile_status') ||
+        url.searchParams.has('profile_message') ||
+        url.searchParams.has('name') ||
+        url.searchParams.has('email');
+
+      if (!hasProfileParams) return;
+
+      url.searchParams.delete('profile_status');
+      url.searchParams.delete('profile_message');
+      url.searchParams.delete('name');
+      url.searchParams.delete('email');
+
+      const next = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : '');
+      window.history.replaceState({}, '', next);
+    })();
+
+  </script>
+</body>
+</html>

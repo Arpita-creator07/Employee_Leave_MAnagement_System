@@ -1,0 +1,100 @@
+body.login-body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(120deg, #3628d0, #e5e7eb);
+    font-family: 'Poppins', sans-serif;
+}
+.login-wrapper {
+    display: flex;
+    width: 900px;
+    min-height: 520px;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.login-left {
+    width: 50%;
+    background: linear-gradient(140deg, #44c4e7, #4f7cff);
+    color: white;
+    padding: 40px 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+.login-left-content {
+    transform: translateY(-22px);
+}
+.login-left h2 {
+    font-weight: 550;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+.login-left p {
+    font-size: 15px;
+    max-width: 300px;
+    margin-top: 0;
+    line-height: 1.6;
+}
+.login-right {
+    width: 50%;
+    padding: 40px;
+}
+.login-title {
+    color: #4f7cff;
+    font-weight: 600;
+}
+.login-subtitle {
+    font-size: 13px;
+    margin-bottom: 20px;
+    color: #777;
+}
+.login-right label {
+    font-size: 13px;
+    margin-top: 10px;
+}
+
+
+.form-control {
+    margin-bottom: 10px;
+}
+.form-select {
+    margin-bottom: 10px;
+}
+.department-select {
+    font-size: 14px;
+}
+.department-select option {
+    font-size: 14px;
+}
+.password-note {
+    font-size: 11px;
+    color: #6b7280;
+}
+.designation-input {
+    font-size: 14px;
+}
+.register-left-panel {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+.register-left-panel h2 {
+    margin-top: 0;
+    margin-right: 0;
+}
+.register-left-panel p {
+    max-width: 300px;
+    margin-top: 4px;
+}
+.login-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 30px;
+    font-size: 13px;
+}

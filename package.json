@@ -1,0 +1,9 @@
+{
+  "name": "employee-leavemanagement-system",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "python -m flask --app app run --debug",
+    "start": "python -m flask --app app run"
+  }
+}

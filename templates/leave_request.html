@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Apply Leave</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+</head>
+
+<body>
+
+<div class="container mt-5">
+
+<h3>Apply Leave</h3>
+
+<select id="leave_type" class="form-control mb-3">
+
+<option>Sick</option>
+
+<option>Casual</option>
+
+</select>
+
+<input id="start_date" type="date" class="form-control mb-3">
+
+<input id="end_date" type="date" class="form-control mb-3">
+
+<textarea id="reason" class="form-control mb-3"></textarea>
+
+<button onclick="applyLeave()" class="btn btn-success">Submit</button>
+
+</div>
+
+
+<script src="js/leave.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leave Management Dashboard</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: "DM Sans", sans-serif; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .fade { animation: fadeIn .35s ease-out both; }
+  </style>
+</head>
+<body
+  class="h-full bg-gradient-to-br from-slate-50 to-blue-50 text-slate-900 overflow-auto"
+  data-active-tab='{{ active_tab|tojson|forceescape }}'
+  data-calendar-leaves='{{ calendar_leaves|tojson|forceescape }}'
+>
+  <div class="h-full w-full flex">
+    <aside class="w-64 bg-white border-r border-blue-100 flex flex-col flex-shrink-0">
+      <div class="p-4 border-b border-blue-100">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-semibold">{{ admin_initials }}</div>
+          <div>
+            <p class="text-sm font-medium text-slate-900">{{ admin_name }}</p>
+            <p class="text-xs text-slate-500">{{ admin_job_role }}</p>
+          </div>
+        </div>
+      </div>
+
+      <nav class="flex-1 p-4 space-y-1">
+        <button onclick="switchPage('dashboard')" data-page="dashboard" class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-100 text-blue-700 border border-blue-200">
+          <span>📊</span><span class="font-medium">Dashboard</span>
+        </button>
+        <button onclick="switchPage('requests')" data-page="requests" class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-blue-50">
+          <span>📋</span><span class="font-medium">Leave Requests</span>
+        </button>
+        <button onclick="switchPage('calendar')" data-page="calendar" class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-blue-50">
+          <span>🗓️</span><span class="font-medium">Calendar</span>
+        </button>
+        <button onclick="switchPage('employees')" data-page="employees" class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-blue-50">
+          <span>👥</span><span class="font-medium">Employees</span>
+        </button>
+        <button onclick="switchPage('settings')" data-page="settings" class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-blue-50">
+          <span>⚙️</span><span class="font-medium">Settings</span>
+        </button>
+      </nav>
+
+      <div class="p-4 border-t border-blue-100">
+        <a href="/logout" class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-medium">
+          <span>↩</span><span>Logout</span>
+        </a>
+      </div>
+    </aside>
+
+    <main class="flex-1 overflow-auto">
+      <div id="page-dashboard" class="p-8 fade">
+        <header class="mb-8 flex items-center justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-slate-900 mb-1">Admin Dashboard</h1>
+            <p class="text-slate-600">Welcome back! Here's your overview.</p>
+          </div>
+          <p class="text-slate-700 font-medium">{{ date_display }}</p>
+        </header>
+
+        {% if add_status and add_message %}
+        <div class="mb-6 px-4 py-3 rounded-lg border {% if add_status == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-700{% else %}bg-rose-50 border-rose-200 text-rose-700{% endif %}">
+          {{ add_message }}
+        </div>
+        {% endif %}
+
+        {% if action_status and action_message %}
+        <div class="mb-6 px-4 py-3 rounded-lg border {% if action_status == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-700{% else %}bg-rose-50 border-rose-200 text-rose-700{% endif %}">
+          {{ action_message }}
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div class="bg-white border border-blue-100 rounded-2xl p-6 shadow-sm">
+            <p class="text-sm text-slate-500">Total Requests</p>
+            <p class="text-3xl font-bold mt-2">{{ total_requests }}</p>
+          </div>
+          <div class="bg-white border border-blue-100 rounded-2xl p-6 shadow-sm">
+            <p class="text-sm text-slate-500">Pending Requests</p>
+            <p class="text-3xl font-bold mt-2 text-amber-600">{{ pending_count }}</p>
+          </div>
+          <div class="bg-white border border-blue-100 rounded-2xl p-6 shadow-sm">
+            <p class="text-sm text-slate-500">Approved</p>
+            <p class="text-3xl font-bold mt-2 text-emerald-600">{{ approved_count }}</p>
+          </div>
+          <div class="bg-white border border-blue-100 rounded-2xl p-6 shadow-sm">
+            <p class="text-sm text-slate-500">On Leave Today</p>
+            <p class="text-3xl font-bold mt-2 text-blue-600">{{ on_leave_today }}</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div class="bg-white border border-indigo-100 rounded-2xl p-5 shadow-sm">
+            <p class="text-sm text-slate-500">Annual Leave</p>
+            <p class="text-2xl font-bold mt-2 text-indigo-700">{{ leave_policy.annual_days }} days</p>
+          </div>
+          <div class="bg-white border border-emerald-100 rounded-2xl p-5 shadow-sm">
+            <p class="text-sm text-slate-500">Sick Leave</p>
+            <p class="text-2xl font-bold mt-2 text-emerald-700">{{ leave_policy.sick_days }} days</p>
+          </div>
+          <div class="bg-white border border-amber-100 rounded-2xl p-5 shadow-sm">
+            <p class="text-sm text-slate-500">Casual Leave</p>
+            <p class="text-2xl font-bold mt-2 text-amber-700">{{ leave_policy.casual_days }} days</p>
+          </div>
+          <div class="bg-white border border-rose-100 rounded-2xl p-5 shadow-sm">
+            <p class="text-sm text-slate-500">Emergency Leave</p>
+            <p class="text-2xl font-bold mt-2 text-rose-700">{{ leave_policy.emergency_days }} days</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <section class="xl:col-span-2 bg-white border border-blue-100 rounded-2xl overflow-hidden shadow-sm">
+            <div class="px-6 py-4 border-b border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h2 class="text-lg font-semibold">Pending Leave Requests</h2>
+            </div>
+            {% if pending_requests %}
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th class="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Employee</th>
+                    <th class="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Type</th>
+                    <th class="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Start</th>
+                    <th class="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase">End</th>
+                    <th class="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Status</th>
+                    <th class="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Action</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  {% for req in pending_requests %}
+                  <tr>
+                    <td class="px-6 py-4">{{ req[1] }}</td>
+                    <td class="px-6 py-4">{{ req[2] }}</td>
+                    <td class="px-6 py-4">{{ req[3] }}</td>
+                    <td class="px-6 py-4">{{ req[4] }}</td>
+                    <td class="px-6 py-4">{{ req[6] }}</td>
+                    <td class="px-6 py-4">
+                      <button
+                        type="button"
+                        class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs"
+                        data-leave-id="{{ req[0] }}"
+                        data-employee='{{ req[1]|tojson|forceescape }}'
+                        data-type='{{ req[2]|tojson|forceescape }}'
+                        data-start='{{ req[3]|tojson|forceescape }}'
+                        data-end='{{ req[4]|tojson|forceescape }}'
+                        data-reason='{{ req[5]|tojson|forceescape }}'
+                        data-status='{{ req[6]|tojson|forceescape }}'
+                        data-attachment='{{ req[7]|tojson|forceescape }}'
+                        onclick="openLeaveActionModal(this)"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% else %}
+            <div class="p-10 text-center text-slate-500">No pending leave requests</div>
+            {% endif %}
+          </section>
+
+          <aside class="space-y-6">
+            <div class="bg-white border border-blue-100 rounded-2xl p-6 shadow-sm">
+              <h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
+              <div class="space-y-3">
+                <button type="button" onclick="openAddEmployeeModal()" class="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-medium">Add New Employee</button>
+              </div>
+            </div>
+            <div class="bg-white border border-blue-100 rounded-2xl p-6 shadow-sm">
+              <h3 class="text-lg font-semibold mb-2">Summary</h3>
+              <p class="text-sm text-slate-600">Rejected Requests: <span class="font-semibold text-rose-600">{{ rejected_count }}</span></p>
+              <p class="text-sm text-slate-600 mt-2">Total Employees: <span class="font-semibold text-slate-800">{{ total_employees }}</span></p>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <div id="page-calendar" class="p-8 hidden">
+        <header class="mb-6">
+          <h1 class="text-3xl font-bold mb-1">Leave Calendar</h1>
+          <p class="text-slate-600">Visualize approved leave schedules and employee availability.</p>
+        </header>
+        <section class="bg-white border border-blue-100 rounded-2xl p-6 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+            <div>
+              <h2 class="text-lg font-semibold text-slate-900">Team Leave Schedule</h2>
+              <p class="text-sm text-slate-500">Approved leave dates are highlighted. Click a date to view employees on leave.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="calendarPrevBtn" type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">Prev</button>
+              <p id="calendarMonthLabel" class="text-sm font-semibold text-slate-800 min-w-[160px] text-center"></p>
+              <button id="calendarNextBtn" type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">Next</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div class="xl:col-span-2">
+              <div class="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-500 mb-2">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+              </div>
+              <div id="adminLeaveCalendarGrid" class="grid grid-cols-7 gap-2"></div>
+            </div>
+
+            <aside class="border border-slate-200 rounded-xl p-4 bg-slate-50">
+              <h3 class="text-sm font-semibold text-slate-800 mb-1">Employees On Leave</h3>
+              <p id="calendarSelectedDateLabel" class="text-xs text-slate-500 mb-3">Select a date</p>
+              <div id="calendarSelectedDateList" class="space-y-2 text-sm text-slate-700">
+                <p class="text-slate-500">No date selected.</p>
+              </div>
+              <div class="mt-4 pt-3 border-t border-slate-200">
+                <div class="flex items-center gap-2 text-xs text-slate-600">
+                  <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                  <span>Approved leave exists on date</span>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </div>
+
+      <div id="page-requests" class="p-8 hidden">
+        <h1 class="text-3xl font-bold mb-1">Recent Leave Requests</h1>
+        <p class="text-slate-600 mb-6">Latest leave activity from your system.</p>
+        <div class="bg-white border border-blue-100 rounded-2xl overflow-hidden shadow-sm">
+          {% if recent_requests %}
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th class="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Employee</th>
+                  <th class="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Type</th>
+                  <th class="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Start</th>
+                  <th class="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase">End</th>
+                  <th class="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Status</th>
+                  <th class="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {% for req in recent_requests %}
+                <tr>
+                  <td class="px-6 py-4">{{ req[1] }}</td>
+                  <td class="px-6 py-4">{{ req[2] }}</td>
+                  <td class="px-6 py-4">{{ req[3] }}</td>
+                  <td class="px-6 py-4">{{ req[4] }}</td>
+                  <td class="px-6 py-4">{{ req[6] }}</td>
+                  <td class="px-6 py-4">
+                    <button
+                      type="button"
+                      class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs"
+                      data-leave-id="{{ req[0] }}"
+                      data-employee='{{ req[1]|tojson|forceescape }}'
+                      data-type='{{ req[2]|tojson|forceescape }}'
+                      data-start='{{ req[3]|tojson|forceescape }}'
+                      data-end='{{ req[4]|tojson|forceescape }}'
+                      data-reason='{{ req[5]|tojson|forceescape }}'
+                      data-status='{{ req[6]|tojson|forceescape }}'
+                      data-attachment='{{ req[7]|tojson|forceescape }}'
+                      onclick="handleLeaveRequestView(this)"
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="p-10 text-center text-slate-500">No leave requests yet</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div id="page-employees" class="p-8 hidden">
+        <header class="mb-6">
+          <h1 class="text-3xl font-bold mb-1">Employees</h1>
+          <p class="text-slate-600">Total employees currently in system: <strong>{{ total_employees }}</strong></p>
+        </header>
+
+        <div class="bg-white border border-blue-100 rounded-2xl overflow-hidden shadow-sm">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Name</th>
+                  <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Email</th>
+                  <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Department</th>
+                  <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Role</th>
+                  <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Leave Balance</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                {% for emp in employees %}
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-6 py-4 font-medium text-slate-800">{{ emp[1] }}</td>
+                  <td class="px-6 py-4 text-slate-700">{{ emp[2] }}</td>
+                  <td class="px-6 py-4 text-slate-700">{{ emp[3] }}</td>
+                  <td class="px-6 py-4 text-slate-700">{{ emp[4] }}</td>
+                  <td class="px-6 py-4">
+                    <span class="inline-flex items-center justify-center min-w-[72px] px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-sm font-semibold">
+                      {{ emp[5] }} days
+                    </span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {% if not employees %}
+          <div class="px-6 py-8 text-center text-slate-500">No employees found</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div id="page-settings" class="p-8 hidden">
+        <header class="mb-6">
+          <h1 class="text-3xl font-bold mb-1">Settings</h1>
+          <p class="text-slate-600">Configure leave policies and system preferences</p>
+        </header>
+
+        {% if settings_status and settings_message %}
+        <div class="mb-4 px-4 py-3 rounded-lg border {% if settings_status == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-700{% else %}bg-rose-50 border-rose-200 text-rose-700{% endif %}">
+          {{ settings_message }}
+        </div>
+        {% endif %}
+
+        <div class="bg-white border border-blue-100 rounded-2xl p-6 shadow-sm max-w-3xl">
+          <form method="POST" action="/admin/settings/save" class="space-y-5">
+            <div>
+              <label class="block text-slate-700 font-medium mb-2">Annual Leave Days</label>
+              <input
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]+"
+                name="annual_days"
+                value="{{ settings_form.annual_days }}"
+                placeholder="Enter total annual leave"
+                oninput="allowOnlyNumbers(this)"
+                required
+                class="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
+              >
+            </div>
+
+            <div>
+              <label class="block text-slate-700 font-medium mb-2">Sick Leave Days</label>
+              <input
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]+"
+                name="sick_days"
+                value="{{ settings_form.sick_days }}"
+                placeholder="Enter total sick leave"
+                oninput="allowOnlyNumbers(this)"
+                required
+                class="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
+              >
+            </div>
+
+            <div>
+              <label class="block text-slate-700 font-medium mb-2">Casual Leave Days</label>
+              <input
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]+"
+                name="casual_days"
+                value="{{ settings_form.casual_days }}"
+                placeholder="Enter total casual leave"
+                oninput="allowOnlyNumbers(this)"
+                required
+                class="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
+              >
+            </div>
+
+            <div>
+              <label class="block text-slate-700 font-medium mb-2">Emergency Leave Days</label>
+              <input
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]+"
+                name="emergency_days"
+                value="{{ settings_form.emergency_days }}"
+                placeholder="Enter total emergency leave"
+                oninput="allowOnlyNumbers(this)"
+                required
+                class="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
+              >
+            </div>
+
+            <p class="text-sm text-slate-500">
+              Validation: <strong>Sick + Casual + Emergency</strong> must be exactly equal to <strong>Annual Leave</strong>.
+            </p>
+
+            <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+              Save Settings
+            </button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="add-employee-modal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/40" onclick="closeAddEmployeeModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="w-full max-w-xl rounded-2xl bg-white border border-blue-100 shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h3 class="text-xl font-semibold text-slate-900">Add Employee</h3>
+          <button type="button" onclick="closeAddEmployeeModal()" class="text-slate-500 hover:text-slate-800 text-xl leading-none">&times;</button>
+        </div>
+
+        <form method="POST" action="/admin/employees/add" class="px-6 py-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="md:col-span-2">
+              <label class="block text-sm text-slate-600 mb-1">Full Name</label>
+              <input type="text" name="name" required pattern="[A-Za-z ]{2,50}" title="Use letters and spaces only (2 to 50 characters)." class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm text-slate-600 mb-1">Email</label>
+              <input type="email" name="email" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm text-slate-600 mb-1">Department</label>
+              <select name="department" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
+                <option value="">Select Department</option>
+                <option value="Engineering">Engineering</option>
+                <option value="HR">HR</option>
+                <option value="Finance">Finance</option>
+                <option value="Marketing">Marketing</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm text-slate-600 mb-1">Job Role</label>
+              <input type="text" name="job_role" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm text-slate-600 mb-1">Password</label>
+              <input type="password" name="password" minlength="8" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
+              <p class="mt-1 text-xs text-slate-500">8+ chars with uppercase, lowercase, number, and special character.</p>
+            </div>
+          </div>
+
+          <div class="mt-6 flex justify-end gap-3">
+            <button type="button" onclick="closeAddEmployeeModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white">Add Employee</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="leave-action-modal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/40" onclick="closeLeaveActionModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="w-full max-w-3xl rounded-2xl bg-white border border-blue-100 shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h3 class="text-xl font-semibold text-slate-900">Leave Request Details</h3>
+          <button type="button" onclick="closeLeaveActionModal()" class="text-slate-500 hover:text-slate-800 text-xl leading-none">&times;</button>
+        </div>
+
+        <div class="px-6 py-5 overflow-y-auto space-y-5 flex-1">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs font-semibold uppercase text-slate-500">Employee</p>
+              <p id="leaveModalEmployee" class="mt-1 text-slate-900"></p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase text-slate-500">Status</p>
+              <p id="leaveModalStatus" class="mt-1 text-slate-900"></p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase text-slate-500">Leave Type</p>
+              <p id="leaveModalType" class="mt-1 text-slate-900"></p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase text-slate-500">Dates</p>
+              <p id="leaveModalDates" class="mt-1 text-slate-900"></p>
+            </div>
+          </div>
+
+          <div>
+            <p class="text-xs font-semibold uppercase text-slate-500">Reason</p>
+            <div id="leaveModalReason" class="mt-2 p-3 rounded-lg bg-slate-50 text-slate-700 whitespace-pre-wrap break-words"></div>
+          </div>
+
+          <div>
+            <p class="text-xs font-semibold uppercase text-slate-500">Attachment</p>
+            <div class="mt-2">
+              <a id="leaveModalAttachmentLink" href="#" target="_blank" class="text-blue-600 hover:underline hidden">View Attachment</a>
+              <p id="leaveModalAttachmentEmpty" class="text-slate-500">No attachment uploaded</p>
+            </div>
+          </div>
+
+          <div>
+            <label for="leaveActionComment" class="block text-sm font-medium text-slate-700 mb-2">Admin Comment</label>
+            <textarea
+              id="leaveActionComment"
+              rows="4"
+              placeholder="Write your comment here. For rejection, minimum 5 words is required."
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+            ></textarea>
+            <p id="leaveActionCommentHint" class="mt-1 text-xs text-slate-500">Word count: 0 (minimum 5 words required for rejection)</p>
+            <p id="leaveActionError" class="mt-2 text-sm text-rose-600 hidden"></p>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+          <button type="button" onclick="closeLeaveActionModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700">Cancel</button>
+          <button type="button" onclick="submitLeaveDecision('approve')" class="px-4 py-2 rounded-lg bg-emerald-600 text-white">Approve</button>
+          <button type="button" onclick="submitLeaveDecision('reject')" class="px-4 py-2 rounded-lg bg-rose-600 text-white">Reject</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="recent-leave-modal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/40" onclick="closeRecentLeaveModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="w-full max-w-3xl rounded-2xl bg-white border border-blue-100 shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h3 class="text-xl font-semibold text-slate-900">Leave Details</h3>
+        </div>
+
+        <div class="px-6 py-5 overflow-y-auto space-y-5 flex-1">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs font-semibold uppercase text-slate-500">Employee</p>
+              <p id="recentModalEmployee" class="mt-1 text-slate-900"></p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase text-slate-500">Status</p>
+              <p id="recentModalStatus" class="mt-1 text-slate-900"></p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase text-slate-500">Leave Type</p>
+              <p id="recentModalType" class="mt-1 text-slate-900"></p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase text-slate-500">Dates</p>
+              <p id="recentModalDates" class="mt-1 text-slate-900"></p>
+            </div>
+          </div>
+
+          <div>
+            <p class="text-xs font-semibold uppercase text-slate-500">Reason</p>
+            <div id="recentModalReason" class="mt-2 p-3 rounded-lg bg-slate-50 text-slate-700 whitespace-pre-wrap break-words"></div>
+          </div>
+
+          <div>
+            <p class="text-xs font-semibold uppercase text-slate-500">Attachment</p>
+            <div class="mt-2">
+              <a id="recentModalAttachmentLink" href="#" target="_blank" class="text-blue-600 hover:underline hidden">View Attachment</a>
+              <p id="recentModalAttachmentEmpty" class="text-slate-500">No attachment uploaded</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+          <button type="button" onclick="closeRecentLeaveModal()" class="px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const APP_CONFIG = document.body.dataset;
+    const ACTIVE_TAB = JSON.parse(APP_CONFIG.activeTab || '"dashboard"');
+    const VALID_TABS = ["dashboard", "calendar", "requests", "employees", "settings"];
+    const CALENDAR_LEAVES = JSON.parse(APP_CONFIG.calendarLeaves || "[]");
+    let selectedLeaveId = null;
+    let calendarMonthCursor = new Date();
+    let calendarSelectedDate = null;
+
+    function allowOnlyNumbers(input) {
+      input.value = input.value.replace(/[^0-9]/g, "");
+    }
+
+    function openAddEmployeeModal() {
+      document.getElementById('add-employee-modal').classList.remove('hidden');
+    }
+
+    function closeAddEmployeeModal() {
+      document.getElementById('add-employee-modal').classList.add('hidden');
+    }
+
+    function parseJsonAttr(value) {
+      try {
+        return JSON.parse(value || '""');
+      } catch {
+        return value || '';
+      }
+    }
+
+    function countWords(text) {
+      return (text || '').trim().split(/\s+/).filter(Boolean).length;
+    }
+
+    function openLeaveActionModal(button) {
+      selectedLeaveId = button.dataset.leaveId;
+      document.getElementById('leaveModalEmployee').textContent = parseJsonAttr(button.dataset.employee);
+      document.getElementById('leaveModalType').textContent = parseJsonAttr(button.dataset.type);
+      document.getElementById('leaveModalStatus').textContent = parseJsonAttr(button.dataset.status);
+
+      const start = formatDateOnly(parseJsonAttr(button.dataset.start));
+      const end = formatDateOnly(parseJsonAttr(button.dataset.end));
+      document.getElementById('leaveModalDates').textContent = `${start} - ${end}`;
+      document.getElementById('leaveModalReason').textContent = parseJsonAttr(button.dataset.reason);
+      const attachment = parseJsonAttr(button.dataset.attachment);
+      const attachmentLink = document.getElementById('leaveModalAttachmentLink');
+      const attachmentEmpty = document.getElementById('leaveModalAttachmentEmpty');
+      if (attachment) {
+        attachmentLink.href = attachment;
+        attachmentLink.classList.remove('hidden');
+        attachmentEmpty.classList.add('hidden');
+      } else {
+        attachmentLink.href = '#';
+        attachmentLink.classList.add('hidden');
+        attachmentEmpty.classList.remove('hidden');
+      }
+
+      const commentBox = document.getElementById('leaveActionComment');
+      const hint = document.getElementById('leaveActionCommentHint');
+      const error = document.getElementById('leaveActionError');
+      commentBox.value = '';
+      hint.textContent = 'Word count: 0 (minimum 5 words required for rejection)';
+      error.textContent = '';
+      error.classList.add('hidden');
+
+      document.getElementById('leave-action-modal').classList.remove('hidden');
+      commentBox.focus();
+    }
+
+    function closeLeaveActionModal() {
+      selectedLeaveId = null;
+      document.getElementById('leave-action-modal').classList.add('hidden');
+    }
+
+    function openRecentLeaveModal(button) {
+      const start = formatDateOnly(parseJsonAttr(button.dataset.start));
+      const end = formatDateOnly(parseJsonAttr(button.dataset.end));
+      document.getElementById('recentModalEmployee').textContent = parseJsonAttr(button.dataset.employee);
+      document.getElementById('recentModalType').textContent = parseJsonAttr(button.dataset.type);
+      document.getElementById('recentModalStatus').textContent = parseJsonAttr(button.dataset.status);
+      document.getElementById('recentModalDates').textContent = `${start} - ${end}`;
+      document.getElementById('recentModalReason').textContent = parseJsonAttr(button.dataset.reason);
+      const attachment = parseJsonAttr(button.dataset.attachment);
+      const attachmentLink = document.getElementById('recentModalAttachmentLink');
+      const attachmentEmpty = document.getElementById('recentModalAttachmentEmpty');
+      if (attachment) {
+        attachmentLink.href = attachment;
+        attachmentLink.classList.remove('hidden');
+        attachmentEmpty.classList.add('hidden');
+      } else {
+        attachmentLink.href = '#';
+        attachmentLink.classList.add('hidden');
+        attachmentEmpty.classList.remove('hidden');
+      }
+      document.getElementById('recent-leave-modal').classList.remove('hidden');
+    }
+
+    function handleLeaveRequestView(button) {
+      const status = String(parseJsonAttr(button.dataset.status) || '').toLowerCase();
+      if (status === 'pending') {
+        openLeaveActionModal(button);
+        return;
+      }
+      openRecentLeaveModal(button);
+    }
+
+    function formatDateOnly(value) {
+      const raw = String(value || '').trim();
+      const match = raw.match(/\d{4}-\d{2}-\d{2}/);
+      if (match) return match[0];
+
+      const parsed = new Date(raw);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString().slice(0, 10);
+      }
+
+      return raw;
+    }
+
+    function closeRecentLeaveModal() {
+      document.getElementById('recent-leave-modal').classList.add('hidden');
+    }
+
+    function toIsoDate(dateObj) {
+      return dateObj.toISOString().slice(0, 10);
+    }
+
+    function normalizeIsoDate(raw) {
+      const text = String(raw || '').trim();
+      const match = text.match(/\d{4}-\d{2}-\d{2}/);
+      return match ? match[0] : '';
+    }
+
+    function getApprovedLeavesByDate() {
+      const map = {};
+      (CALENDAR_LEAVES || []).forEach((item) => {
+        const start = normalizeIsoDate(item.start_date);
+        const end = normalizeIsoDate(item.end_date);
+        if (!start || !end) return;
+
+        const cursor = new Date(`${start}T00:00:00`);
+        const endDate = new Date(`${end}T00:00:00`);
+        if (Number.isNaN(cursor.getTime()) || Number.isNaN(endDate.getTime())) return;
+
+        while (cursor <= endDate) {
+          const key = toIsoDate(cursor);
+          if (!map[key]) map[key] = [];
+          map[key].push({ employee: item.employee, leave_type: item.leave_type });
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      });
+      return map;
+    }
+
+    const APPROVED_LEAVES_BY_DATE = getApprovedLeavesByDate();
+
+    function renderLeaveListForDate(isoDate) {
+      const label = document.getElementById('calendarSelectedDateLabel');
+      const list = document.getElementById('calendarSelectedDateList');
+      const entries = APPROVED_LEAVES_BY_DATE[isoDate] || [];
+
+      label.textContent = isoDate || 'Select a date';
+      if (!isoDate) {
+        list.innerHTML = '<p class="text-slate-500">No date selected.</p>';
+        return;
+      }
+      if (entries.length === 0) {
+        list.innerHTML = '<p class="text-slate-500">No employees are on leave.</p>';
+        return;
+      }
+
+      list.innerHTML = entries.map((entry) => `
+        <div class="bg-white border border-slate-200 rounded-lg px-3 py-2">
+          <p class="font-medium text-slate-800">${entry.employee}</p>
+          <p class="text-xs text-slate-500">${entry.leave_type}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderAdminLeaveCalendar() {
+      const monthStart = new Date(calendarMonthCursor.getFullYear(), calendarMonthCursor.getMonth(), 1);
+      const monthEnd = new Date(calendarMonthCursor.getFullYear(), calendarMonthCursor.getMonth() + 1, 0);
+      const daysInMonth = monthEnd.getDate();
+      const startWeekDay = monthStart.getDay();
+      const grid = document.getElementById('adminLeaveCalendarGrid');
+      const monthLabel = document.getElementById('calendarMonthLabel');
+      const todayIso = toIsoDate(new Date());
+
+      monthLabel.textContent = monthStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      grid.innerHTML = '';
+
+      for (let i = 0; i < startWeekDay; i += 1) {
+        const spacer = document.createElement('div');
+        spacer.className = 'h-20 rounded-lg border border-transparent';
+        grid.appendChild(spacer);
+      }
+
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const dateObj = new Date(calendarMonthCursor.getFullYear(), calendarMonthCursor.getMonth(), day);
+        const isoDate = toIsoDate(dateObj);
+        const entries = APPROVED_LEAVES_BY_DATE[isoDate] || [];
+        const hasApprovedLeave = entries.length > 0;
+        const isToday = isoDate === todayIso;
+        const isSelected = isoDate === calendarSelectedDate;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `h-20 rounded-lg border p-2 text-left transition ${isSelected ? 'border-blue-500 ring-2 ring-blue-100 bg-blue-50' : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50/60'}`;
+        btn.innerHTML = `
+          <div class="flex items-start justify-between">
+            <span class="text-sm font-semibold ${isToday ? 'text-blue-700' : 'text-slate-700'}">${day}</span>
+            ${hasApprovedLeave ? '<span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block mt-0.5"></span>' : ''}
+          </div>
+          <p class="mt-2 text-[11px] text-slate-500">${hasApprovedLeave ? `${entries.length} on leave` : 'Available'}</p>
+        `;
+        btn.addEventListener('click', () => {
+          calendarSelectedDate = isoDate;
+          renderAdminLeaveCalendar();
+          renderLeaveListForDate(calendarSelectedDate);
+        });
+        grid.appendChild(btn);
+      }
+    }
+
+    async function submitLeaveDecision(action) {
+      if (!selectedLeaveId) return;
+
+      const commentBox = document.getElementById('leaveActionComment');
+      const error = document.getElementById('leaveActionError');
+      const comment = (commentBox.value || '').trim();
+      const words = countWords(comment);
+
+      error.textContent = '';
+      error.classList.add('hidden');
+
+      if (action === 'reject') {
+        if (!comment) {
+          error.textContent = 'Comment is required for rejection.';
+          error.classList.remove('hidden');
+          return;
+        }
+        if (words < 5) {
+          error.textContent = 'Rejection comment must be at least 5 words.';
+          error.classList.remove('hidden');
+          return;
+        }
+      }
+
+      try {
+        const response = await fetch(`/admin/${action}/${selectedLeaveId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ comment })
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          error.textContent = data.error || `Unable to ${action} leave request.`;
+          error.classList.remove('hidden');
+          return;
+        }
+
+        closeLeaveActionModal();
+        window.location.reload();
+      } catch {
+        error.textContent = 'Network error. Please try again.';
+        error.classList.remove('hidden');
+      }
+    }
+
+    function switchPage(page, syncUrl = true) {
+      if (!VALID_TABS.includes(page)) {
+        page = "dashboard";
+      }
+
+      document.querySelectorAll('[id^="page-"]').forEach(el => el.classList.add('hidden'));
+      const target = document.getElementById(`page-${page}`);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.nav-link').forEach(link => {
+        if (link.dataset.page === page) {
+          link.classList.add('bg-blue-100', 'text-blue-700', 'border', 'border-blue-200');
+          link.classList.remove('text-slate-600', 'hover:bg-blue-50');
+        } else {
+          link.classList.remove('bg-blue-100', 'text-blue-700', 'border', 'border-blue-200');
+          link.classList.add('text-slate-600', 'hover:bg-blue-50');
+          }
+        });
+
+      if (syncUrl) {
+        const url = new URL(window.location.href);
+        if (page === "dashboard") {
+          url.searchParams.delete("tab");
+        } else {
+          url.searchParams.set("tab", page);
+        }
+        const next = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : "");
+        window.history.replaceState({}, "", next);
+      }
+    }
+
+    (function clearFlashQueryParams() {
+      const url = new URL(window.location.href);
+      const hasFlash =
+        url.searchParams.has("settings_status") ||
+        url.searchParams.has("settings_message") ||
+        url.searchParams.has("add_status") ||
+        url.searchParams.has("add_message") ||
+        url.searchParams.has("action_status") ||
+        url.searchParams.has("action_message");
+
+      if (!hasFlash) return;
+
+      const tab = url.searchParams.get("tab");
+      url.searchParams.delete("settings_status");
+      url.searchParams.delete("settings_message");
+      url.searchParams.delete("add_status");
+      url.searchParams.delete("add_message");
+      url.searchParams.delete("action_status");
+      url.searchParams.delete("action_message");
+
+      if (!tab) {
+        url.searchParams.delete("tab");
+      }
+
+      const clean = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : "");
+      window.history.replaceState({}, "", clean);
+    })();
+
+    (function initTab() {
+      const url = new URL(window.location.href);
+      const urlTab = url.searchParams.get("tab");
+      const initialTab = VALID_TABS.includes(urlTab) ? urlTab : (VALID_TABS.includes(ACTIVE_TAB) ? ACTIVE_TAB : "dashboard");
+      switchPage(initialTab, false);
+    })();
+
+    (function initCommentCounter() {
+      const commentBox = document.getElementById('leaveActionComment');
+      const hint = document.getElementById('leaveActionCommentHint');
+      if (!commentBox || !hint) return;
+      commentBox.addEventListener('input', () => {
+        hint.textContent = `Word count: ${countWords(commentBox.value)} (minimum 5 words required for rejection)`;
+      });
+    })();
+
+    (function initAutoRefresh() {
+      const REFRESH_MS = 10000;
+      setInterval(() => {
+        const addModalOpen = !document.getElementById('add-employee-modal')?.classList.contains('hidden');
+        const actionModalOpen = !document.getElementById('leave-action-modal')?.classList.contains('hidden');
+        const recentModalOpen = !document.getElementById('recent-leave-modal')?.classList.contains('hidden');
+        if (addModalOpen || actionModalOpen || recentModalOpen) return;
+        window.location.reload();
+      }, REFRESH_MS);
+    })();
+
+    (function initAdminCalendar() {
+      const prevBtn = document.getElementById('calendarPrevBtn');
+      const nextBtn = document.getElementById('calendarNextBtn');
+      if (!prevBtn || !nextBtn) return;
+
+      prevBtn.addEventListener('click', () => {
+        calendarMonthCursor = new Date(calendarMonthCursor.getFullYear(), calendarMonthCursor.getMonth() - 1, 1);
+        renderAdminLeaveCalendar();
+      });
+
+      nextBtn.addEventListener('click', () => {
+        calendarMonthCursor = new Date(calendarMonthCursor.getFullYear(), calendarMonthCursor.getMonth() + 1, 1);
+        renderAdminLeaveCalendar();
+      });
+
+      calendarSelectedDate = toIsoDate(new Date());
+      renderAdminLeaveCalendar();
+      renderLeaveListForDate(calendarSelectedDate);
+    })();
+  </script>
+</body>
+</html>

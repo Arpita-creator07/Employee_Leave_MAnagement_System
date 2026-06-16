@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Register - Leave Management</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="login-body">
+
+<div class="login-wrapper">
+
+
+    <div class="login-left register-left-panel">
+
+        <div class="left-content login-left-content">
+
+            <h2>Create Account</h2>
+
+            <p>
+            Register to access the employee leave management system and
+            track your leave requests easily.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="login-right">
+
+        <h3 class="login-title">Register</h3>
+
+        <p class="login-subtitle">
+        Create your account to continue
+        </p>
+
+        {% if status and message %}
+        <div class="alert {% if status == 'success' %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+            {{ message }}
+        </div>
+        {% endif %}
+
+        <form id="registerForm" method="POST" action="/register">
+            <label for="name" class="d-block">Name</label>
+            <input id="name" type="text" name="name" class="form-control" value="{{ form_data.get('name', '') }}" required pattern="[A-Za-z ]{2,50}" title="Use letters and spaces only (2 to 50 characters).">
+
+            <label for="email" class="d-block">Employee Email</label>
+            <input id="email" type="email" name="email" class="form-control" value="{{ form_data.get('email', '') }}" required>
+
+            <label for="department" class="d-block">Department</label>
+            <select id="department" name="department" class="form-select department-select" required>
+                <option value="">Select Department</option>
+                <option value="Engineering" {% if form_data.get('department') == 'Engineering' %}selected{% endif %}>Engineering</option>
+                <option value="HR" {% if form_data.get('department') == 'HR' %}selected{% endif %}>HR</option>
+                <option value="IT" {% if form_data.get('department') == 'IT' %}selected{% endif %}>IT</option>
+                <option value="Finance" {% if form_data.get('department') == 'Finance' %}selected{% endif %}>Finance</option>
+                <option value="Marketing" {% if form_data.get('department') == 'Marketing' %}selected{% endif %}>Marketing</option>
+            </select>
+
+            <label for="job_role" class="d-block">Designation</label>
+            <input id="job_role" type="text" name="job_role" class="form-control designation-input" value="{{ form_data.get('job_role', '') }}" placeholder="Enter your designation" required>
+
+            <label for="password" class="d-block">Password</label>
+            <input id="password" type="password" name="password" class="form-control" minlength="8" required>
+            <small class="password-note d-block mt-1">Note: Use 8+ characters with uppercase, lowercase, number, and special character.</small>
+
+            <button class="btn btn-primary w-100 mt-3">REGISTER</button>
+        </form>
+
+        <div class="login-links">
+
+            <span>Already have an account? <a href="/">Login</a></span>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>
